@@ -1,17 +1,30 @@
 import json
+import os
 from typing import List
 from langchain_core.documents import Document
 from langchain_ollama import ChatOllama
 from unstructured.partition.pdf import partition_pdf
 from unstructured.chunking.title import chunk_by_title
+from unstructured.staging.base import elements_to_json, elements_from_json
 from langchain_chroma import Chroma
 from langchain_core.messages import HumanMessage
 from langchain_community.embeddings import FastEmbedEmbeddings
+
+file_path = "D:/RAG/RAG/retrieval-augmented-generation-options.pdf"
+CACHE_JSON_PATH = "partitioned_elements.json"
 
 def partition_document(file_path:str):
     """Extract elements from PDF using unstructured"""
     print(f"partioning documents:{file_path}")
 
+#check if elements are already exists in the cache
+    if os.path.exists(CACHE_JSON_PATH):
+        print("loading elements from cache")
+        elements=elements_from_json(CACHE_JSON_PATH)
+        print(f"Loaded {len(elements)} elements from disk!")
+        return elements
+
+#run if elements are not in cache
     elements=partition_pdf(
         filename=file_path,
         strategy="hi_res",#use the most accurate (but slower) processing method for extraction
@@ -20,6 +33,11 @@ def partition_document(file_path:str):
         extract_image_block_to_payload=True#store image as base64 data that ucan actually use
     )
 
-    print(f"extract {len(elements)} elements")
+    elements_to_json(elements, filename=CACHE_JSON_PATH)
+    print(f"✅ Saved {len(elements)} elements to '{CACHE_JSON_PATH}' for future runs!")
     return elements
 
+
+
+
+partition_document(file_path)
