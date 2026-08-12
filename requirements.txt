@@ -1,0 +1,20 @@
+# Unstructured PDF & OCR Support
+unstructured[all-docs]
+python-magic-bin
+
+# LangChain Core & Ecosystem
+langchain
+langchain-community
+langchain-core
+langchain-text-splitters
+
+# Vector Store
+langchain-chroma
+
+# Embeddings & Local Models
+fastembed
+langchain-ollama
+
+# Utilities
+python-dotenv
+pydantic
