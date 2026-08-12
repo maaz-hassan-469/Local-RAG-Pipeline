@@ -40,4 +40,4 @@ def partition_document(file_path:str):
 
 
 
-partition_document(file_path)
+Element=partition_document(file_path)
