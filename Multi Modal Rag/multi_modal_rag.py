@@ -37,7 +37,21 @@ def partition_document(file_path:str):
     print(f"✅ Saved {len(elements)} elements to '{CACHE_JSON_PATH}' for future runs!")
     return elements
 
+def create_chunks_by_title(elements):
+    """create intelligent based chunking by using title based chunking"""
 
+    print("creating smart chunks")
+    chunks=chunk_by_title(
+        elements,
+        max_characters=3000,#hard limit never exceed 3000 characters per chunk
+        new_after_n_chars=2400,#try to start new chunk after 2400
+        combine_text_under_n_chars=500#merge tiny chunks under 500 chars with neighbours
+    )
+
+    print(f"create {len(chunks)} chunks")
+
+    return chunks
 
 
 Element=partition_document(file_path)
+chunks=create_chunks_by_title(Element)
