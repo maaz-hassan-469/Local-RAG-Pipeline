@@ -77,6 +77,58 @@ def separate_content(chunks):
     content_data["types"]=list(set(content_data["types"]))
     return content_data
 
+def summarize_Chunks(chunks):
+    """process all chunks with AI summaries"""
+    print("processing chunnks with ai memories")
+    langchain_documents=[]
+    total_chunks=len(chunks)
+
+    for i,chunks in enumerate(chunks):
+        current_chunk=i+1
+        print("Processing chunk {current_chunk}/{total_chunks}...")
+
+        content_data=separate_content(chunks)
+        print(f"      Types found: {content_data['types']}")
+        print(f"      Tables: {len(content_data['tables'])}, Images: {len(content_data['images'])}")
+
+        if content_data['tables'] or content_data['images']:
+            print(f"-> Creating AI summary for mixed content...")
+            try:
+                enhanced_content = create_ai_enhanced_summary(
+                content_data['text'],
+                content_data['tables'],
+                content_data['images']
+                        )
+                print("ai summary created successfully")
+            except Exception as e:
+                print("ai summary failed")
+                enhanced_content=content_data["text"]
+
+        else:
+            print("using raw text")
+            enhanced_content=content_data["text"]
+
+        doc=Document(
+            page_content=enhanced_content,
+            metadata={
+                "original_content":json.dumps({
+                    "raw_text":content_data["text"],
+                    "tables_html":content_data["tables"],
+                    "image_base64":content_data["images"]
+                })
+            }       
+              )
+
+        langchain_documents.append(doc)
+        print("processed {len(langchain_documents)} chunks")
+
+        return langchain_documents
+            
+
+
+def create_ai_enhanced_summary(text:str,tables:List[str],images:List[str])-> str:
+    """create AI-enhanced summary for mixed content"""
+
 
 
 
