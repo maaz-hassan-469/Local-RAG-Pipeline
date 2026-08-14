@@ -12,6 +12,10 @@ from langchain_community.embeddings import FastEmbedEmbeddings
 
 file_path = "D:/RAG/RAG/retrieval-augmented-generation-options.pdf"
 CACHE_JSON_PATH = "partitioned_elements.json"
+v_llm=ChatOllama(model="moondream", temperature=0.2)
+qa_llm = ChatOllama(model="llama3.2", temperature=0.1)
+embedding_model=FastEmbedEmbeddings()
+
 
 def partition_document(file_path:str):
     """Extract elements from PDF using unstructured"""
@@ -120,7 +124,7 @@ def summarize_Chunks(chunks):
               )
 
         langchain_documents.append(doc)
-        print("processed {len(langchain_documents)} chunks")
+        print(f"processed {len(langchain_documents)} chunks")
 
     return langchain_documents
             
@@ -129,7 +133,7 @@ def summarize_Chunks(chunks):
 def create_ai_enhanced_summary(text:str,tables:List[str],images:List[str])-> str:
     """create AI-enhanced summary for mixed content"""
     try:
-        llm=ChatOllama(model="moondream", temperature=0.2)
+       
         prompt_text=f"""you are creating a searchable description for document content retrieval.
         CONTENT TO ANALYZE:
         TEXT CONTENT:
@@ -160,7 +164,7 @@ def create_ai_enhanced_summary(text:str,tables:List[str],images:List[str])-> str
                 "image_url": {"url":f"data:image/jpeg;base64,{image_base64}"}
             })
         message = HumanMessage(content=message_content)
-        response = llm.invoke([message])
+        response = v_llm.invoke([message])
 
         return response.content
 
@@ -193,16 +197,28 @@ def export_chunks_to_json(chunks,filename="chunks_export.json"):
 
 def create_vectorstore(documents,persist_directory="D:/RAG/RAG/chroma_db"):
     """create persist directory and store vector embeddings in the chroma db"""
-    embedding_model=FastEmbedEmbeddings()
     vector_store=Chroma.from_documents(
         documents=documents,
         embedding=embedding_model,
         persist_directory=persist_directory,
-        collection_metadata={"hsnw:space":"cosine"}
+        collection_metadata={"hnsw:space":"cosine"}
     )
 
     print("finsihed creating vector store")
     print(f"vectore store created and store in the persist_directory{persist_directory}")
 
     return vector_store
+
+def run_complete_ingestion(pdf_path:str):
+    """run the complete RAG pipeline ingestion"""
+    print("starting ingestioon pipeline")
+    print("="*50)
+    elements=partition_document(pdf_path)
+    chunks=create_chunks_by_title(elements)
+    summarized_chunks=summarize_Chunks(chunks)
+    db=create_vectorstore(summarized_chunks,persist_directory="D:/RAG/RAG/chroma_db")
+    print("pipeline completed successfully")
+    return db
+
+db=run_complete_ingestion("D:/RAG/RAG/retrieval-augmented-generation-options.pdf")
 
