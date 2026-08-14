@@ -129,7 +129,7 @@ def summarize_Chunks(chunks):
 def create_ai_enhanced_summary(text:str,tables:List[str],images:List[str])-> str:
     """create AI-enhanced summary for mixed content"""
     try:
-        llm=ChatOllama(model="llama3.2:1b", temperature=0.2)
+        llm=ChatOllama(model="moondream", temperature=0.2)
         prompt_text=f"""you are creating a searchable description for document content retrieval.
         CONTENT TO ANALYZE:
         TEXT CONTENT:
@@ -191,8 +191,18 @@ def export_chunks_to_json(chunks,filename="chunks_export.json"):
     print(f"exported {len(export_data)} chunks to {filename}")
     return export_data
 
+def create_vectorstore(documents,persist_directory="D:/RAG/RAG/chroma_db"):
+    """create persist directory and store vector embeddings in the chroma db"""
+    embedding_model=FastEmbedEmbeddings()
+    vector_store=Chroma.from_documents(
+        documents=documents,
+        embedding=embedding_model,
+        persist_directory=persist_directory,
+        collection_metadata={"hsnw:space":"cosine"}
+    )
 
-Element=partition_document(file_path)
-chunks=create_chunks_by_title(Element)
-summaries=summarize_Chunks(chunks)
-json_data=export_chunks_to_json(summaries)
+    print("finsihed creating vector store")
+    print(f"vectore store created and store in the persist_directory{persist_directory}")
+
+    return vector_store
+
