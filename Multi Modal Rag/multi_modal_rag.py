@@ -153,18 +153,28 @@ def create_ai_enhanced_summary(text:str,tables:List[str],images:List[str])-> str
 
                 SEARCHABLE DESCRIPTION:"""
 
-            message_content = [{"type": "text", "text": prompt_text}]
-            for image_base64 in images:
-                    message_content.append({
+        message_content = [{"type": "text", "text": prompt_text}]
+        for image_base64 in images:
+            message_content.append({
                 "type": "image_url",
                 "image_url": {"url":f"data:image/jpeg;base64,{image_base64}"}
             })
-            message = HumanMessage(content=message_content)
-            response = llm.invoke([message])
+        message = HumanMessage(content=message_content)
+        response = llm.invoke([message])
 
-            return response.content
+        return response.content
 
-    except Exceptionas e:
+    except Exception as e:
+        print("ai summary failed")
+        summary=f"{text[:300]}"
+        if tables:
+            summary+=f"contains {len(tables)} tables"
+        if images:
+            summary+=f"contains {len(images)} images"
+        return summary
+    
+
+
 
 
 
@@ -173,3 +183,4 @@ def create_ai_enhanced_summary(text:str,tables:List[str],images:List[str])-> str
 
 Element=partition_document(file_path)
 chunks=create_chunks_by_title(Element)
+summaries=summarize_Chunks(chunks)
