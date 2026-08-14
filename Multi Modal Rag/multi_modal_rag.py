@@ -83,11 +83,11 @@ def summarize_Chunks(chunks):
     langchain_documents=[]
     total_chunks=len(chunks)
 
-    for i,chunks in enumerate(chunks):
+    for i,chunk in enumerate(chunks):
         current_chunk=i+1
-        print("Processing chunk {current_chunk}/{total_chunks}...")
+        print(f"Processing chunk {current_chunk}/{total_chunks}...")
 
-        content_data=separate_content(chunks)
+        content_data=separate_content(chunk)
         print(f"      Types found: {content_data['types']}")
         print(f"      Tables: {len(content_data['tables'])}, Images: {len(content_data['images'])}")
 
@@ -122,14 +122,14 @@ def summarize_Chunks(chunks):
         langchain_documents.append(doc)
         print("processed {len(langchain_documents)} chunks")
 
-        return langchain_documents
+    return langchain_documents
             
 
 
 def create_ai_enhanced_summary(text:str,tables:List[str],images:List[str])-> str:
     """create AI-enhanced summary for mixed content"""
     try:
-        llm=ChatOllama(model="llama3.2-vision:11b", temperature=0.2)
+        llm=ChatOllama(model="llama3.2:1b", temperature=0.2)
         prompt_text=f"""you are creating a searchable description for document content retrieval.
         CONTENT TO ANALYZE:
         TEXT CONTENT:
@@ -140,7 +140,7 @@ def create_ai_enhanced_summary(text:str,tables:List[str],images:List[str])-> str
             for i,table in enumerate(tables):
                 prompt_text+=f"Table {i+1}:\n {table}\n\n"
 
-                prompt_text+="""YOUR TASK:
+        prompt_text+="""YOUR TASK:
                 Generate a comprehensive, searchable description that covers:
 
                 1. Key facts, numbers, and data points from text and tables
@@ -173,14 +173,26 @@ def create_ai_enhanced_summary(text:str,tables:List[str],images:List[str])-> str
             summary+=f"contains {len(images)} images"
         return summary
     
+def export_chunks_to_json(chunks,filename="chunks_export.json"):
+    """export processed chunk into json"""
+    export_data=[]
+    for i,doc in enumerate(chunks):
+        chunk_data={
+            "chunk_id":i+1,
+            "enhanced_content":doc.page_content,
+            "metadata":{
+                "original_content":json.loads(doc.metadata.get("original_content","{}"))
+            }
+        }
+        export_data.append(chunk_data)
 
-
-
-
-
-
+    with open(filename,"w",encoding="utf-8") as f:
+        json.dump(export_data,f,indent=2,ensure_ascii=False)
+    print(f"exported {len(export_data)} chunks to {filename}")
+    return export_data
 
 
 Element=partition_document(file_path)
 chunks=create_chunks_by_title(Element)
 summaries=summarize_Chunks(chunks)
+json_data=export_chunks_to_json(summaries)
