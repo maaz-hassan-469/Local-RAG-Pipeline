@@ -7,7 +7,7 @@ from unstructured.partition.pdf import partition_pdf
 from unstructured.chunking.title import chunk_by_title
 from unstructured.staging.base import elements_to_json, elements_from_json
 from langchain_chroma import Chroma
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage,SystemMessage
 from langchain_community.embeddings import FastEmbedEmbeddings
 
 file_path = "D:/RAG/RAG/retrieval-augmented-generation-options.pdf"
@@ -196,6 +196,7 @@ def export_chunks_to_json(chunks,filename="chunks_export.json"):
     return export_data
 
 def create_vectorstore(documents,persist_directory="D:/RAG/RAG/chroma_db"):
+
     """create persist directory and store vector embeddings in the chroma db"""
     vector_store=Chroma.from_documents(
         documents=documents,
@@ -209,16 +210,37 @@ def create_vectorstore(documents,persist_directory="D:/RAG/RAG/chroma_db"):
 
     return vector_store
 
-def run_complete_ingestion(pdf_path:str):
-    """run the complete RAG pipeline ingestion"""
-    print("starting ingestioon pipeline")
-    print("="*50)
-    elements=partition_document(pdf_path)
-    chunks=create_chunks_by_title(elements)
-    summarized_chunks=summarize_Chunks(chunks)
-    db=create_vectorstore(summarized_chunks,persist_directory="D:/RAG/RAG/chroma_db")
-    print("pipeline completed successfully")
-    return db
+def answer_query(query:str,vector_store:Chroma,k: int=3):
+    """retrieve relevant chunks and generate an answer with llm"""
+    retriever=vector_store.as_retriever(search_kwargs={"k":k})
+    retrieved_docs=retriever.invoke(query)
 
-db=run_complete_ingestion("D:/RAG/RAG/retrieval-augmented-generation-options.pdf")
+    context_blocks = []
+    for i, doc in enumerate(retrieved_docs):
+        # Prefer original text + summary for rich grounding
+        raw_text = doc.metadata.get("raw_text", "")
+        summary = doc.page_content
+        context_blocks.append(
+            f"--- Context Block {i+1} ---\n"
+            f"Summary/Search Index: {summary}\n"
+            f"Original Content: {raw_text}\n"
+        )
+
+    context_str = "\n".join(context_blocks)
+
+    system_prompt = (
+        "You are an expert technical assistant. Answer the user's question using ONLY the provided context. "
+        "If the answer cannot be deduced from the context, state that clearly. "
+        "Be factual, well-structured, and concise."
+    )
+    user_prompt=f"CONTEXT:\n{context_str}\n\nUSER QUESTION: {query}"
+
+    messages = [
+        SystemMessage(content=system_prompt),
+        HumanMessage(content=user_prompt),
+    ]
+    print("\nGenerating response...")
+    response = qa_llm.invoke(messages)
+    return response.content, retrieved_docs
+
 
