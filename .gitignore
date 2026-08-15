@@ -3,3 +3,4 @@
 /db
 /docs
 partitioned_elements.json
+/chroma_db

@@ -13,7 +13,7 @@ from langchain_community.embeddings import FastEmbedEmbeddings
 file_path = "D:/RAG/RAG/retrieval-augmented-generation-options.pdf"
 CACHE_JSON_PATH = "partitioned_elements.json"
 v_llm=ChatOllama(model="moondream", temperature=0.2)
-qa_llm = ChatOllama(model="llama3.2", temperature=0.1)
+qa_llm = ChatOllama(model="llama3.2:1b", temperature=0.1)
 embedding_model=FastEmbedEmbeddings()
 CHROMA_DIR = "D:/RAG/RAG/chroma_db"
 
