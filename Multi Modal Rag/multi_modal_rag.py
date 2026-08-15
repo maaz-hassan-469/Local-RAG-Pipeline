@@ -15,6 +15,7 @@ CACHE_JSON_PATH = "partitioned_elements.json"
 v_llm=ChatOllama(model="moondream", temperature=0.2)
 qa_llm = ChatOllama(model="llama3.2", temperature=0.1)
 embedding_model=FastEmbedEmbeddings()
+CHROMA_DIR = "D:/RAG/RAG/chroma_db"
 
 
 def partition_document(file_path:str):
@@ -195,19 +196,29 @@ def export_chunks_to_json(chunks,filename="chunks_export.json"):
     print(f"exported {len(export_data)} chunks to {filename}")
     return export_data
 
-def create_vectorstore(documents,persist_directory="D:/RAG/RAG/chroma_db"):
+def get_or_create_vectorstore(pdf_path: str, persist_directory: str =CHROMA_DIR):
+    """Loads existing Chroma vectorstore or runs the full ingestion pipeline."""
+    if os.path.exists(persist_directory) and os.listdir(persist_directory):
+        print(f"Loading existing vectorstore from '{persist_directory}'...")
+        return Chroma(
+            persist_directory=persist_directory,
+            embedding_function=embedding_model,
+            collection_metadata={"hnsw:space": "cosine"},
+        )
 
-    """create persist directory and store vector embeddings in the chroma db"""
-    vector_store=Chroma.from_documents(
-        documents=documents,
+    print(f"No existing vectorstore found. Starting full ingestion...")
+    elements = partition_document(pdf_path)
+    chunks = create_chunks_by_title(elements)
+    summarized_chunks = summarize_Chunks(chunks)
+
+    print(f"\n[4/4] Creating Vectorstore in '{persist_directory}'...")
+    vector_store = Chroma.from_documents(
+        documents=summarized_chunks,
         embedding=embedding_model,
         persist_directory=persist_directory,
-        collection_metadata={"hnsw:space":"cosine"}
+        collection_metadata={"hnsw:space": "cosine"},  # Fixed typo
     )
-
-    print("finsihed creating vector store")
-    print(f"vectore store created and store in the persist_directory{persist_directory}")
-
+    print("Vectorstore initialized successfully.")
     return vector_store
 
 def answer_query(query:str,vector_store:Chroma,k: int=3):
@@ -243,4 +254,33 @@ def answer_query(query:str,vector_store:Chroma,k: int=3):
     response = qa_llm.invoke(messages)
     return response.content, retrieved_docs
 
+def main():
+    db=get_or_create_vectorstore(file_path,persist_directory=CHROMA_DIR)
+    print("\n" + "=" * 50)
+    print("RAG System Ready! Type 'exit' or 'q' to quit.")
+    print("=" * 50 + "\n")
+    while True:
+        try:
+            user_input=input("enter your question: ").strip()
+            if user_input.lower() in ["exit","q","quit"]:
 
+                print("exiting...")
+                break
+            if not user_input:
+                continue
+
+            answer,docs=answer_query(user_input,db,k=3)
+            print("\n" + "-" * 40)
+            print("ANSWER:")
+            print("-" * 40)
+            print(answer)
+            print("-" * 40)
+            print(f"(Retrieved {len(docs)} supporting context chunks)\n")
+
+        except KeyboardInterrupt:
+            print("\nExiting...")
+            break
+
+
+if __name__ == "__main__":
+    main()
